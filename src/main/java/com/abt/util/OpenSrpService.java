@@ -2,6 +2,8 @@ package com.abt.util;
 
 
 import akka.http.javadsl.model.DateTime;
+import com.abt.domain.ReferralResponse;
+
 import com.abt.UcsLabIntegrationRoutes;
 import com.abt.domain.*;
 import com.google.gson.Gson;
@@ -52,6 +54,80 @@ public class OpenSrpService {
                 Arrays.asList(new Object[]{new Date()}), null, null, "end");
     }
 
+
+    /**
+     * Creates the referral response events form the response object
+     * 
+     * @param referralResponse the referral response object 
+     * @return Referral Event and subsequent events
+     */
+    public static Event getReferralResponseEvent(ReferralResponse referralResponse){
+        Event referralEvent = new Event();
+
+        ReferralResponse.ResponseMetadata responseMetadata = referralResponse.getResponseMetadata();
+        ReferralResponse.ReferralTask referralTask = referralResponse.getReferralTask();
+        ReferralResponse.EventMetadata eventMetadata = referralResponse.getEventMetadata();
+
+        setMetaData(referralEvent, eventMetadata);
+        referralEvent.setBaseEntityId(referralTask.getRocId());
+
+        referralEvent.setEventType("Referral Response");
+        List<Obs> referralObs = getReferralObs(responseMetadata);
+
+        //referralEvent.setObs();
+
+        return referralEvent;
+    }
+
+    /**
+     * Generate a list of Obs from the eventMetadata object
+     * @param responseMetadata
+     * @return obs, list of obs to add to the event
+     */
+    private static List<Obs> getReferralObs(ReferralResponse.ResponseMetadata responseMetadata){
+        List<Obs> obs = new ArrayList<>();
+
+        obs.add(generateObservation("referralNo", "referralNo", responseMetadata.getRefferralNo()));
+        obs.add(generateObservation("referralFeedbackDate", "referralFeedbackDate", responseMetadata.getReferralFeedbackDate()));
+
+
+        return obs;
+    }
+
+    private static Obs generateObservation(String fieldCode, String formSubmissionField, Object value){
+        return new Obs(
+                "concept",
+                "text",
+                fieldCode,
+                "",
+                Arrays.asList(new Object[]{value}),
+                null,
+                null,
+                formSubmissionField);
+    }
+
+    /**
+     * Set Event Metadata
+     *
+     * @param event              created Event
+     * @param referralResponseMetadata Object
+     */
+    private static void setMetaData(Event event, ReferralResponse.EventMetadata referralResponseMetadata) {
+        event.setLocationId(referralResponseMetadata.getLocationId());
+        event.setProviderId(referralResponseMetadata.getProviderId());
+        event.setTeamId(referralResponseMetadata.getTeamId());
+        event.setTeam(referralResponseMetadata.getTeam());
+        event.setType("Event");
+        event.setFormSubmissionId(UUID.randomUUID().toString());
+        event.setEventDate(new Date());
+        event.setDateCreated(new Date());
+        event.addObs(OpenSrpService.getStartOb());
+        event.addObs(OpenSrpService.getEndOb());
+        event.setClientApplicationVersion(clientApplicationVersion);
+        event.setClientDatabaseVersion(clientDatabaseVersion);
+        event.setDuration(0);
+        event.setIdentifiers(new HashMap<>());
+    }
 
     /**
      * Creates a Lab Results Event for a test request.
