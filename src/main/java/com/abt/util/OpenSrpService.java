@@ -64,17 +64,18 @@ public class OpenSrpService {
     public static Event getReferralResponseEvent(ReferralResponse referralResponse){
         Event referralEvent = new Event();
 
-        ReferralResponse.ResponseMetadata responseMetadata = referralResponse.getResponseMetadata();
-        ReferralResponse.ReferralTask referralTask = referralResponse.getReferralTask();
+        ReferralResponse.GothomisResponse response = referralResponse.getGothomisResponse();
+
+        ReferralResponse.ResponseMetadata responseMetadata = response.getResponseMetadata();
         ReferralResponse.EventMetadata eventMetadata = referralResponse.getEventMetadata();
 
         setMetaData(referralEvent, eventMetadata);
-        referralEvent.setBaseEntityId(referralTask.getRocId());
+        referralEvent.setBaseEntityId(eventMetadata.getBaseEntityId());
 
         referralEvent.setEventType("Referral Response");
         List<Obs> referralObs = getReferralObs(responseMetadata);
 
-        //referralEvent.setObs();
+        referralEvent.setObs(referralObs);
 
         return referralEvent;
     }
@@ -87,21 +88,64 @@ public class OpenSrpService {
     private static List<Obs> getReferralObs(ReferralResponse.ResponseMetadata responseMetadata){
         List<Obs> obs = new ArrayList<>();
 
-        obs.add(generateObservation("referralNo", "referralNo", responseMetadata.getRefferralNo()));
-        obs.add(generateObservation("referralFeedbackDate", "referralFeedbackDate", responseMetadata.getReferralFeedbackDate()));
+        obs.add(generateObservation("referralNo", "referralNo", responseMetadata.getRefferralNo(), null));
+        obs.add(generateObservation("referralFeedbackDate", "referralFeedbackDate", responseMetadata.getReferralFeedbackDate(), null));
 
+        // Service provided observation
+        List<String> service_codes = new ArrayList<>();
+        List<String> service_names = new ArrayList<>();
+        List<String> hfrCodes = new ArrayList<>();
+        for (ReferralResponse.ServicesProvided servicesProvided : responseMetadata.getServicesProvided()){
+            service_codes.add(servicesProvided.getServiceCode());
+            service_names.add(servicesProvided.getServiceName());
+            hfrCodes.add(servicesProvided.getHfrCode());
+        }
+        Obs servicesProvidedOb = generateObservation("servicesProvided", "servicesProvided", service_codes.toString(), service_names);
+        servicesProvidedOb.setComments(hfrCodes.toString());
+        obs.add(servicesProvidedOb);
+
+        //Prescriptions observation
+        List<String> prescription_codes = new ArrayList<>();
+        List<String> prescription_names = new ArrayList<>();
+        List<Boolean> prescription_dispensed = new ArrayList<Boolean>();
+
+        List<String> dispencedPrescriptionCodes = new ArrayList<>();
+        List<String> dispencedPrescriptionNames = new ArrayList<>();
+
+        for (ReferralResponse.Prescriptions prescription : responseMetadata.getPrescriptions()){
+            prescription_codes.add(prescription.getPrescriptionCode());
+            prescription_names.add(prescription.getPrescriptionName());
+            prescription_dispensed.add(prescription.isDespensed());
+
+            if (prescription.isDespensed()){
+                dispencedPrescriptionCodes.add(prescription.getPrescriptionCode());
+                dispencedPrescriptionNames.add(prescription.getPrescriptionName());
+            }
+
+        }
+        Obs prescriptionsObservation = generateObservation("prescriptions", "prescriptions", prescription_codes.toString(), prescription_names.toString());
+        prescriptionsObservation.setComments(prescription_dispensed.toString());
+        obs.add(prescriptionsObservation);
+
+        //Dispensed medication observation
+        Obs dispencedPrescriptionObservation = generateObservation("dispensedMedication", "dispencedMedication", dispencedPrescriptionCodes.toString(), dispencedPrescriptionNames.toString());
+        obs.add(dispencedPrescriptionObservation);
+
+        //Outcome observation
+        Obs outcomeObservation = generateObservation("outcome", "outcome", responseMetadata.outcomeToJsonString(), responseMetadata.outcomeToJsonString());
+        obs.add(outcomeObservation);
 
         return obs;
     }
 
-    private static Obs generateObservation(String fieldCode, String formSubmissionField, Object value){
+    private static Obs generateObservation(String fieldCode, String formSubmissionField, Object value, Object humanReadableValues){
         return new Obs(
                 "concept",
                 "text",
                 fieldCode,
                 "",
                 Arrays.asList(new Object[]{value}),
-                null,
+                Arrays.asList(new Object[]{humanReadableValues}),
                 null,
                 formSubmissionField);
     }
@@ -110,13 +154,13 @@ public class OpenSrpService {
      * Set Event Metadata
      *
      * @param event              created Event
-     * @param referralResponseMetadata Object
+     * @param eventMetadata Object
      */
-    private static void setMetaData(Event event, ReferralResponse.EventMetadata referralResponseMetadata) {
-        event.setLocationId(referralResponseMetadata.getLocationId());
-        event.setProviderId(referralResponseMetadata.getProviderId());
-        event.setTeamId(referralResponseMetadata.getTeamId());
-        event.setTeam(referralResponseMetadata.getTeam());
+    private static void setMetaData(Event event, ReferralResponse.EventMetadata eventMetadata) {
+        event.setLocationId(eventMetadata.getLocationId());
+        event.setProviderId(eventMetadata.getProviderId());
+        event.setTeamId(eventMetadata.getTeamId());
+        event.setTeam(eventMetadata.getTeam());
         event.setType("Event");
         event.setFormSubmissionId(UUID.randomUUID().toString());
         event.setEventDate(new Date());
