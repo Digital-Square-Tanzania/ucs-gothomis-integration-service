@@ -72,7 +72,7 @@ public class OpenSrpService {
         setMetaData(referralEvent, eventMetadata);
         referralEvent.setBaseEntityId(eventMetadata.getBaseEntityId());
 
-        referralEvent.setEventType("Referral Response");
+        referralEvent.setEventType("Facility Referral Feedback");
         List<Obs> referralObs = getReferralObs(responseMetadata);
 
         referralEvent.setObs(referralObs);
