@@ -2,45 +2,96 @@ package com.abt.domain;
 
 import com.abt.domain.LabResult.TBLResult;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
 public class ReferralResponse {
 
-    @JsonProperty("referral_response")
-    private ResponseMetadata responseMetadata;
+    @JsonProperty("gothomis_response")
+    private GothomisResponse gothomisResponse;
 
     @JsonProperty("event_metadata")
     private EventMetadata eventMetadata;
-
-    @JsonProperty("referral_task")
-    private ReferralTask referralTask;
 
     public void setEventMetadata(EventMetadata eventMetadata) {
         this.eventMetadata = eventMetadata;
     }
 
-    public void setReferralResponse(ResponseMetadata referralResponse) {
-        this.responseMetadata = referralResponse;
-    }
-
-    public void setReferralTask(ReferralTask referralTask) {
-        this.referralTask = referralTask;
+    public void setGothomisResponse(GothomisResponse gothomisResponse) {
+        this.gothomisResponse = gothomisResponse;
     }
 
     public EventMetadata getEventMetadata() {
         return eventMetadata;
     }
 
-    public ReferralTask getReferralTask() {
-        return referralTask;
+    public GothomisResponse getGothomisResponse() {
+        return gothomisResponse;
     }
 
-    public ResponseMetadata getResponseMetadata() {
-        return responseMetadata;
+    public static class GothomisResponse {
+        @JsonProperty("id")
+        private int id;
+
+        @JsonProperty("referral_no")
+        private String referralNo;
+
+        @JsonProperty("received_date")
+        private String receivedDate;
+
+        @JsonProperty("processed_date")
+        private String processedDate;
+
+        @JsonProperty("received_feedback_payload")
+        private ResponseMetadata responseMetadata;
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public void setReferralNo(String referralNo) {
+            this.referralNo = referralNo;
+        }
+
+        public void setReceivedDate(String receivedDate) {
+            this.receivedDate = receivedDate;
+        }
+
+        public void setProcessedDate(String processedDate) {
+            this.processedDate = processedDate;
+        }
+
+        public void setReferralResponse(ResponseMetadata referralResponse) {
+            this.responseMetadata = referralResponse;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getReferralNo() {
+            return referralNo;
+        }
+
+        public String getReceivedDate() {
+            return receivedDate;
+        }
+
+        public String getProcessedDate() {
+            return processedDate;
+        }
+
+        public ResponseMetadata getResponseMetadata() {
+            return responseMetadata;
+        }
+
     }
 
     public static class ResponseMetadata {
+
+        ObjectMapper objectMapper = new ObjectMapper();
 
         @JsonProperty("referralNo")
         private String refferralNo;
@@ -96,21 +147,43 @@ public class ReferralResponse {
         public List<Outcomes> getOutcomes() {
             return outcomes;
         }
+
+        public String outcomeToJsonString(){
+            try {
+                // Convert Outcomes object to JSON string
+                return objectMapper.writeValueAsString(getOutcomes());
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+
     }
     
     public static class EventMetadata {
-        
-        @JsonProperty("locationId")
+
+        @JsonProperty("baseentityid")
+        private String baseEntityId;
+
+        @JsonProperty("locationid")
         private String locationId;
 
-        @JsonProperty("providerId")
+        @JsonProperty("providerid")
         private String providerId;
 
         @JsonProperty("team")
         private String team;
 
-        @JsonProperty("team_id")
+        @JsonProperty("teamid")
         private String teamId;
+
+        public void setBaseEntityId(String baseEntityId) {
+            this.baseEntityId = baseEntityId;
+        }
+
+        public String getBaseEntityId() {
+            return baseEntityId;
+        }
 
         public void setLocationId(String locationId) {
             this.locationId = locationId;
@@ -142,31 +215,6 @@ public class ReferralResponse {
 
         public String getTeamId() {
             return teamId;
-        }
-    }
-
-    public static class  ReferralTask {
-    
-        @JsonProperty("for")
-        private String rocId;
-
-        @JsonProperty("")
-        private String referralReason;
-
-        public void setRocId(String rocId) {
-            this.rocId = rocId;
-        }
-
-        public void setReferralReason(String referralReason) {
-            this.referralReason = referralReason;
-        }
-
-        public String getReferralReason() {
-            return referralReason;
-        }
-
-        public String getRocId() {
-            return rocId;
         }
     }
 
@@ -256,16 +304,17 @@ public class ReferralResponse {
 
     public static class  Outcomes {
 
-        private List<Outcomes> outcomes;
+        @JsonProperty("pregnancyConfirmation")
+        private PregnancyConfirmation pregnancyConfirmation;
 
-        public void setOutcomes(List<Outcomes> outcomes) {
-            this.outcomes = outcomes;
+        public PregnancyConfirmation getPregnancyConfirmation() {
+            return pregnancyConfirmation;
         }
 
-        public List<Outcomes> getOutcomes() {
-            return outcomes;
+        public void setPregnancyConfirmation(PregnancyConfirmation pregnancyConfirmation) {
+            this.pregnancyConfirmation = pregnancyConfirmation;
         }
-    
+
     }
 
     public static class PregnancyConfirmation {
