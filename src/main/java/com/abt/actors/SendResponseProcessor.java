@@ -15,20 +15,10 @@ import static com.abt.util.OpenSrpService.sendDataToDestination;
 public class SendResponseProcessor {
     public String sendResponse(ReferralResponse referralResponse, String url, String username, String password) {
         try {
-            /**
-             *
-             *  1. Handle the referral feedback event creating the event "Referral Feedback" as a result
-             *  2. Capture the referral task to be updated
-             *
-             */
-
             Event referralResponseEvent = OpenSrpService.getReferralResponseEvent(referralResponse);
 
             List<Event> events = new ArrayList<>();
             events.add(referralResponseEvent);
-
-            //Task creation implementation
-
 
             return sendDataToDestination(new EventRequest(events), url, username, password);
         } catch (Exception e) {
