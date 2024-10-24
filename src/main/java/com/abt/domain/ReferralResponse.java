@@ -1,6 +1,5 @@
 package com.abt.domain;
 
-import com.abt.domain.LabResult.TBLResult;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -94,7 +93,7 @@ public class ReferralResponse {
         ObjectMapper objectMapper = new ObjectMapper();
 
         @JsonProperty("referralNo")
-        private String refferralNo;
+        private String referralNo;
 
         @JsonProperty("referralFeedbackDate")
         private String referralFeedbackDate;
@@ -108,8 +107,8 @@ public class ReferralResponse {
         @JsonProperty("outcomes")
         private List<Outcomes> outcomes;
 
-        public void setRefferralNo(String refferralNo) {
-            this.refferralNo = refferralNo;
+        public void setRefferralNo(String referralNo) {
+            this.referralNo = referralNo;
         }
 
         public void setReferralFeedbackDate(String referralFeedbackDate) {
@@ -129,7 +128,7 @@ public class ReferralResponse {
         }
 
         public String getRefferralNo() {
-            return refferralNo;
+            return referralNo;
         }
 
         public String getReferralFeedbackDate() {
@@ -274,10 +273,10 @@ public class ReferralResponse {
         private String prescriptionName;
 
         @JsonProperty("isDispensed")
-        private boolean isDespensed;
+        private boolean isDispensed;
 
-        public void setDespensed(boolean isDespensed) {
-            this.isDespensed = isDespensed;
+        public void setDespensed(boolean isDispensed) {
+            this.isDispensed = isDispensed;
         }
 
         public void setPrescriptionCode(String prescriptionCode) {
@@ -297,7 +296,7 @@ public class ReferralResponse {
         }
 
         public boolean isDespensed() {
-            return isDespensed;
+            return isDispensed;
         }
 
     }
