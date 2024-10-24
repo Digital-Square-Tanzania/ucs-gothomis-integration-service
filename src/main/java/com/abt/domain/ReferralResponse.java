@@ -1,6 +1,5 @@
 package com.abt.domain;
 
-import com.abt.domain.LabResult.TBLResult;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -177,6 +176,9 @@ public class ReferralResponse {
         @JsonProperty("teamid")
         private String teamId;
 
+        @JsonProperty("taskid")
+        private String taskId;
+
         public void setBaseEntityId(String baseEntityId) {
             this.baseEntityId = baseEntityId;
         }
@@ -215,6 +217,14 @@ public class ReferralResponse {
 
         public String getTeamId() {
             return teamId;
+        }
+
+        public void setProviderId(String providerId) {
+            this.providerId = providerId;
+        }
+
+        public String getTaskId() {
+            return taskId;
         }
     }
 
