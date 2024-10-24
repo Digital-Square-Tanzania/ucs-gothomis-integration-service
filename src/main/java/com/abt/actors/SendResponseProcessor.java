@@ -2,7 +2,6 @@ package com.abt.actors;
 
 import com.abt.domain.Event;
 import com.abt.domain.EventRequest;
-import com.abt.domain.LabResult;
 import com.abt.util.OpenSrpService;
 
 import com.abt.domain.ReferralResponse;

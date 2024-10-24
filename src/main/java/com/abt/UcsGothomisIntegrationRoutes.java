@@ -7,8 +7,6 @@ import akka.actor.typed.javadsl.AskPattern;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.server.Route;
-import com.abt.domain.LabRejection;
-import com.abt.domain.LabResult;
 import com.abt.domain.ReferralResponse;
 import com.abt.util.CustomJacksonSupport;
 import org.slf4j.Logger;
