@@ -4,11 +4,9 @@ package com.abt.util;
 import akka.http.javadsl.model.DateTime;
 import com.abt.domain.ReferralResponse;
 
-import com.abt.UcsLabIntegrationRoutes;
 import com.abt.domain.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -72,8 +70,12 @@ public class OpenSrpService {
         setMetaData(referralEvent, eventMetadata);
         referralEvent.setBaseEntityId(eventMetadata.getBaseEntityId());
 
-        referralEvent.setEventType("Facility Referral Feedback");
+        referralEvent.setEventType("Close Referral");
         List<Obs> referralObs = getReferralObs(responseMetadata);
+
+        referralObs.add(generateObservation("referral_task_previous_status", "referral_task_previous_status", new ArrayList<>(Collections.singletonList("Ready")), List.of(), false));
+        referralObs.add(generateObservation("referral_task_previous_business_status", "referral_task_previous_business_status", new ArrayList<>(Collections.singletonList("Referred")), List.of(), false));
+        referralObs.add(generateObservation("referral_task", "referral_task", new ArrayList<>(Collections.singletonList(eventMetadata.getTaskId())), List.of(), false));
 
         referralEvent.setObs(referralObs);
 
@@ -94,7 +96,7 @@ public class OpenSrpService {
         // Service provided observation
         List<Object> service_codes = new ArrayList<>();
         List<Object> service_names = new ArrayList<>();
-        List<String> hfrCodes = new ArrayList<>();
+        List<Object> hfrCodes = new ArrayList<>();
         for (ReferralResponse.ServicesProvided servicesProvided : responseMetadata.getServicesProvided()){
             service_codes.add(servicesProvided.getServiceCode());
             service_names.add(servicesProvided.getServiceName());
@@ -150,6 +152,19 @@ public class OpenSrpService {
                 formSubmissionField);
     }
 
+    private static Obs generateObservation(String fieldCode, String formSubmissionField, List<Object> value, List<Object> humanReadableValues, boolean saveAsArray){
+        return new Obs(
+                "concept",
+                "text",
+                fieldCode,
+                "",
+                value,
+                humanReadableValues,
+                null,
+                formSubmissionField,
+                saveAsArray);
+    }
+
     /**
      * Set Event Metadata
      *
@@ -171,225 +186,6 @@ public class OpenSrpService {
         event.setClientDatabaseVersion(clientDatabaseVersion);
         event.setDuration(0);
         event.setIdentifiers(new HashMap<>());
-    }
-
-    /**
-     * Creates a Lab Results Event for a test request.
-     *
-     * @param labResult The Results object.
-     * @return LabResultsEvent Event.
-     */
-    public static Event getLabResultsEvent(LabResult labResult) {
-        Event labResultEvent = new Event();
-        labResultEvent.setBaseEntityId(labResult.getBaseEntityId());
-
-        List<LabResult.TBLResult> tblResults = labResult.getTBLResults();
-
-        LabResult.TBLResult mTblResult = null;
-        for (LabResult.TBLResult tblResult : tblResults) {
-            if (tblResult.getLIMSObservationCode().equalsIgnoreCase("HIVVQ") ||
-                    tblResult.getLIMSObservationCode().equalsIgnoreCase("HIVVC") ||
-                    tblResult.getLIMSObservationCode().equalsIgnoreCase("HIVVM")
-            ) {
-                mTblResult = tblResult;
-                break;
-            } else if (tblResult.getLIMSObservationCode().equalsIgnoreCase("HIVPC") || tblResult.getLIMSObservationCode().equalsIgnoreCase("EID")) {
-                mTblResult = tblResult;
-            }
-        }
-
-        if (labResult.getSampleType().equalsIgnoreCase("HVL")) {
-            labResultEvent.setEventType("Lab HVL Results");
-        } else {
-            labResultEvent.setEventType("HEID Test Results");
-        }
-
-        labResultEvent.setEntityType("ec_lab_requests");
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "tested_by", "", Arrays.asList(new Object[]{
-                labResult.getTestedBy()}), null, null, "tested_by"));
-
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "authorized_by", "",
-                Arrays.asList(new Object[]{labResult.getAuthorisedBy()}), null, null,
-                "authorized_by"));
-
-        try {
-            Date authorizedDateObj = parseDate(labResult.getAuthorisedDateTime());
-            String authorizedDate = dateFormat.format(authorizedDateObj.getTime());
-            String authorizedTime = timeFormat.format(authorizedDateObj.getTime());
-
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "authorized_date", "",
-                    Arrays.asList(new Object[]{authorizedDate}), null, null,
-                    "authorized_date"));
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "authorized_time", "",
-                    Arrays.asList(new Object[]{authorizedTime}), null, null,
-                    "authorized_time"));
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "authorized_date_time", "",
-                    Arrays.asList(new Object[]{labResult.getAuthorisedDateTime()}), null, null,
-                    "authorized_date_time"));
-        } catch (Exception e) {
-            LoggerFactory.getLogger(UcsLabIntegrationRoutes.class).error(e.getMessage(), e);
-        }
-
-
-        try {
-            Date testedDateTimeObj = parseDate(labResult.getAnalysisDateTime());
-            String testedDate = dateFormat.format(testedDateTimeObj.getTime());
-            String testedTime = timeFormat.format(testedDateTimeObj.getTime());
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "tested_date", "",
-                    Arrays.asList(new Object[]{testedDate}), null, null,
-                    "tested_date"));
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "tested_time", "",
-                    Arrays.asList(new Object[]{testedTime}), null, null,
-                    "tested_time"));
-
-            labResultEvent.addObs(new Obs("concept", "text",
-                    "tested_date_time", "",
-                    Arrays.asList(new Object[]{labResult.getAnalysisDateTime()}), null, null,
-                    "tested_date_time"));
-        } catch (Exception e) {
-            LoggerFactory.getLogger(UcsLabIntegrationRoutes.class).error(e.getMessage(), e);
-        }
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "type_of_results", "",
-                Arrays.asList(new Object[]{"results"}), null, null,
-                "type_of_results"));
-
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "sample_id", "",
-                Arrays.asList(new Object[]{labResult.getSampleId()}), null, null,
-                "sample_id"));
-
-        String results = "";
-        if (labResult.getSampleType().equalsIgnoreCase("HVL")) {
-            labResultEvent.setEventType("Lab HVL Results");
-
-            results = mTblResult.getLIMSRptResult();
-
-            if (mTblResult.getLIMSCodedValue().toLowerCase().contains("tnd") || results.toLowerCase().contains("detected")) {
-                results = "11";
-            } else if (isInteger(results)) {
-                results = mTblResult.getLIMSRptResult();
-            } else {
-                results = extractIntegers(results).get(0).toString();
-            }
-        } else {
-            labResultEvent.setEventType("HEID Test Results");
-            results = mTblResult.getLIMSRptResult();
-        }
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "results", "",
-                Arrays.asList(new Object[]{results}), null, null,
-                "results"));
-
-
-        labResultEvent.addObs(new Obs("concept", "text",
-                "source", "",
-                Arrays.asList(new Object[]{"DDR"}), null, null,
-                "source"));
-
-        setMetaData(labResultEvent, labResult);
-        return labResultEvent;
-    }
-
-
-    /**
-     * Creates a Lab Rejection Event for a test request.
-     *
-     * @param labRejection The Rejection object.
-     * @return LabResultsEvent Event.
-     */
-    public static Event getLabRejectionEvent(LabRejection labRejection) {
-        Event labRejectionEvent = new Event();
-        labRejectionEvent.setBaseEntityId(labRejection.getBaseEntityId());
-
-        List<LabRejection.LIMSRejection> tblRejections = labRejection.getLIMSRejectionArray();
-
-        LabRejection.LIMSRejection mTblRejection = null;
-        StringBuilder rejectionReasons = new StringBuilder();
-        for (LabRejection.LIMSRejection rejection : tblRejections) {
-            rejectionReasons.append(rejection.getDescription()).append(", ");
-        }
-
-        if (labRejection.getSampleType().equalsIgnoreCase("HVL")) {
-            labRejectionEvent.setEventType("Lab HVL Results");
-        } else {
-            labRejectionEvent.setEventType("HEID Test Results");
-        }
-
-
-        labRejectionEvent.setEntityType("ec_lab_requests");
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "rejected_by", "", Arrays.asList(new Object[]{
-                labRejection.getRegisteredBy()}), null, null, "rejected_by"));
-
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "type_of_results", "",
-                Arrays.asList(new Object[]{"rejected"}), null, null,
-                "type_of_results"));
-
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "reasons_for_rejection", "",
-                Arrays.asList(new Object[]{rejectionReasons.toString().replaceAll(", $", "")}), null, null,
-                "reasons_for_rejection"));
-
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "sample_id", "",
-                Arrays.asList(new Object[]{labRejection.getSampleId()}), null, null,
-                "sample_id"));
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "source", "",
-                Arrays.asList(new Object[]{"DDR"}), null, null,
-                "source"));
-
-
-        try {
-            Date rejectionDateTimeObj = parseDate(labRejection.getReceivedDateTime());
-            String rejectionDate = dateFormat.format(rejectionDateTimeObj);
-            String rejectionTime = timeFormat.format(rejectionDateTimeObj);
-
-
-            labRejectionEvent.addObs(new Obs("concept", "text",
-                    "rejection_date", "",
-                    Arrays.asList(new Object[]{rejectionDate}), null, null,
-                    "rejection_date"));
-
-            labRejectionEvent.addObs(new Obs("concept", "text",
-                    "rejection_time", "",
-                    Arrays.asList(new Object[]{rejectionTime}), null, null,
-                    "rejection_time"));
-        } catch (Exception e) {
-            LoggerFactory.getLogger(UcsLabIntegrationRoutes.class).error(e.getMessage(), e);
-        }
-
-        labRejectionEvent.addObs(new Obs("concept", "text",
-                "results", "",
-                Arrays.asList(new Object[]{"rejected"}), null, null,
-                "results"));
-
-        setMetaData(labRejectionEvent, labRejection);
-        return labRejectionEvent;
     }
 
     private static boolean isInteger(String str) {
@@ -414,29 +210,6 @@ public class OpenSrpService {
         }
 
         return integers;
-    }
-
-    /**
-     * Set Event Metadata
-     *
-     * @param event              created Event
-     * @param labRequestMetadata Object
-     */
-    private static void setMetaData(Event event, LabRequestMetadata labRequestMetadata) {
-        event.setLocationId(labRequestMetadata.getLocationId());
-        event.setProviderId(labRequestMetadata.getProviderId());
-        event.setTeamId(labRequestMetadata.getTeamId());
-        event.setTeam(labRequestMetadata.getTeam());
-        event.setType("Event");
-        event.setFormSubmissionId(UUID.randomUUID().toString());
-        event.setEventDate(new Date());
-        event.setDateCreated(new Date());
-        event.addObs(OpenSrpService.getStartOb());
-        event.addObs(OpenSrpService.getEndOb());
-        event.setClientApplicationVersion(clientApplicationVersion);
-        event.setClientDatabaseVersion(clientDatabaseVersion);
-        event.setDuration(0);
-        event.setIdentifiers(new HashMap<>());
     }
 
 
@@ -482,7 +255,6 @@ public class OpenSrpService {
 
             conn.disconnect();
         } catch (Exception e) {
-            LoggerFactory.getLogger(UcsLabIntegrationRoutes.class).error(e.getMessage(), e);
             response = "Error: " + e.getMessage();
 
         }
