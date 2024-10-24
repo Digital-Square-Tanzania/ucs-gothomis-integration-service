@@ -88,29 +88,29 @@ public class OpenSrpService {
     private static List<Obs> getReferralObs(ReferralResponse.ResponseMetadata responseMetadata){
         List<Obs> obs = new ArrayList<>();
 
-        obs.add(generateObservation("referralNo", "referralNo", responseMetadata.getRefferralNo(), null));
-        obs.add(generateObservation("referralFeedbackDate", "referralFeedbackDate", responseMetadata.getReferralFeedbackDate(), null));
+        obs.add(generateObservation("referralNo", "referralNo", new ArrayList<>(Collections.singletonList(responseMetadata.getRefferralNo())), null));
+        obs.add(generateObservation("referralFeedbackDate", "referralFeedbackDate", new ArrayList<>(Collections.singletonList(responseMetadata.getReferralFeedbackDate())), null));
 
         // Service provided observation
-        List<String> service_codes = new ArrayList<>();
-        List<String> service_names = new ArrayList<>();
+        List<Object> service_codes = new ArrayList<>();
+        List<Object> service_names = new ArrayList<>();
         List<String> hfrCodes = new ArrayList<>();
         for (ReferralResponse.ServicesProvided servicesProvided : responseMetadata.getServicesProvided()){
             service_codes.add(servicesProvided.getServiceCode());
             service_names.add(servicesProvided.getServiceName());
             hfrCodes.add(servicesProvided.getHfrCode());
         }
-        Obs servicesProvidedOb = generateObservation("servicesProvided", "servicesProvided", service_codes.toString(), service_names);
+        Obs servicesProvidedOb = generateObservation("servicesProvided", "servicesProvided", service_codes, service_names);
         servicesProvidedOb.setComments(hfrCodes.toString());
         obs.add(servicesProvidedOb);
 
         //Prescriptions observation
-        List<String> prescription_codes = new ArrayList<>();
-        List<String> prescription_names = new ArrayList<>();
+        List<Object> prescription_codes = new ArrayList<>();
+        List<Object> prescription_names = new ArrayList<>();
         List<Boolean> prescription_dispensed = new ArrayList<Boolean>();
 
-        List<String> dispencedPrescriptionCodes = new ArrayList<>();
-        List<String> dispencedPrescriptionNames = new ArrayList<>();
+        List<Object> dispencedPrescriptionCodes = new ArrayList<>();
+        List<Object> dispencedPrescriptionNames = new ArrayList<>();
 
         for (ReferralResponse.Prescriptions prescription : responseMetadata.getPrescriptions()){
             prescription_codes.add(prescription.getPrescriptionCode());
@@ -123,29 +123,29 @@ public class OpenSrpService {
             }
 
         }
-        Obs prescriptionsObservation = generateObservation("prescriptions", "prescriptions", prescription_codes.toString(), prescription_names.toString());
+        Obs prescriptionsObservation = generateObservation("prescriptions", "prescriptions", prescription_codes, prescription_names);
         prescriptionsObservation.setComments(prescription_dispensed.toString());
         obs.add(prescriptionsObservation);
 
         //Dispensed medication observation
-        Obs dispencedPrescriptionObservation = generateObservation("dispensedMedication", "dispencedMedication", dispencedPrescriptionCodes.toString(), dispencedPrescriptionNames.toString());
+        Obs dispencedPrescriptionObservation = generateObservation("dispensedMedication", "dispencedMedication", dispencedPrescriptionCodes, dispencedPrescriptionNames);
         obs.add(dispencedPrescriptionObservation);
 
         //Outcome observation
-        Obs outcomeObservation = generateObservation("outcome", "outcome", responseMetadata.outcomeToJsonString(), responseMetadata.outcomeToJsonString());
+        Obs outcomeObservation = generateObservation("outcome", "outcome", new ArrayList<>(Collections.singletonList(responseMetadata.outcomeToJsonString())), new ArrayList<>(Collections.singletonList(responseMetadata.outcomeToJsonString())));
         obs.add(outcomeObservation);
 
         return obs;
     }
 
-    private static Obs generateObservation(String fieldCode, String formSubmissionField, Object value, Object humanReadableValues){
+    private static Obs generateObservation(String fieldCode, String formSubmissionField, List<Object> value, List<Object> humanReadableValues){
         return new Obs(
                 "concept",
                 "text",
                 fieldCode,
                 "",
-                Arrays.asList(new Object[]{value}),
-                Arrays.asList(new Object[]{humanReadableValues}),
+                value,
+                humanReadableValues,
                 null,
                 formSubmissionField);
     }
