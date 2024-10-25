@@ -23,7 +23,7 @@ To build and run the service after performing the above configurations, run the 
 
 First Install docker in your PC by following [this guide](https://docs.docker.com/engine/install/). Secondly, clone this repo to your computer by using git clone and the repo's address:
 
-`git clone https://github.com/d-tree-org/ucs-gothomis-integration-service.git`
+`git clone https://github.com/Digital-Square-Tanzania/ucs-gothomis-integration-service.git`
 
 Once you have completed cloning the repo, go inside the repo in your computer: `cd ucs-gothomis-integration-service`
 
