@@ -2,11 +2,16 @@ package com.abt.util;
 
 
 import akka.http.javadsl.model.DateTime;
+import com.abt.UcsGothomisIntegrationRoutes;
+import com.abt.domain.Event;
+import com.abt.domain.EventRequest;
+import com.abt.domain.Obs;
 import com.abt.domain.ReferralResponse;
-
-import com.abt.domain.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -14,7 +19,18 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,6 +38,8 @@ import java.util.regex.Pattern;
  * Service class for OpenSRP operations.
  */
 public class OpenSrpService {
+
+    private final static Logger log = LoggerFactory.getLogger(OpenSrpService.class);
 
     private static final int clientDatabaseVersion = 17;
     private static final int clientApplicationVersion = 2;
@@ -59,7 +77,7 @@ public class OpenSrpService {
      * @param referralResponse the referral response object 
      * @return Referral Event and subsequent events
      */
-    public static Event getReferralResponseEvent(ReferralResponse referralResponse){
+    public static Event getReferralResponseEvent(ReferralResponse referralResponse) {
         Event referralEvent = new Event();
 
         ReferralResponse.GothomisResponse response = referralResponse.getGothomisResponse();
@@ -82,12 +100,88 @@ public class OpenSrpService {
         return referralEvent;
     }
 
+
+    /**
+     * Creates the Pregnancy Confirmation events form the response
+     * object
+     *
+     * @param referralResponse the referral response object
+     * @return Pregnancy Confirmation Event
+     */
+    public static Event getPregnancyConfirmationEvent(ReferralResponse referralResponse) {
+        Event pregnancyConfirmationStatusEvent = new Event();
+
+        ReferralResponse.GothomisResponse response =
+                referralResponse.getGothomisResponse();
+
+        ReferralResponse.ResponseMetadata responseMetadata =
+                response.getResponseMetadata();
+
+        List<ReferralResponse.Outcomes> outcomes =
+                responseMetadata.getOutcomes();
+
+        for (ReferralResponse.Outcomes outcome : outcomes) {
+            if (outcome.getPregnancyConfirmation() != null) {
+                ReferralResponse.EventMetadata eventMetadata =
+                        referralResponse.getEventMetadata();
+
+                setMetaData(pregnancyConfirmationStatusEvent, eventMetadata);
+                pregnancyConfirmationStatusEvent.setBaseEntityId(eventMetadata.getBaseEntityId());
+
+                pregnancyConfirmationStatusEvent.setEventType("Pregnancy " +
+                        "Confirmation");
+                List<Obs> obs = new ArrayList<>();
+
+                obs.add(generateObservation("pregnancy_confirmation_status",
+                        "pregnancy_confirmation_status",
+                        new ArrayList<>(Collections.singletonList(outcome.getPregnancyConfirmation().getStatus())),
+                        List.of(), false));
+
+                if (StringUtils.isNotBlank(outcome.getPregnancyConfirmation().getEdd())) {
+                    obs.add(generateObservation("edd", "edd",
+                            new ArrayList<>(Collections.singletonList(outcome.getPregnancyConfirmation().getEdd())), List.of(), false));
+                }
+
+
+                if (StringUtils.isNotBlank(outcome.getPregnancyConfirmation().getLnmp())) {
+                    try {
+                        obs.add(generateObservation("gest_age", "gest_age",
+                                new ArrayList<>(Collections.singletonList(
+                                        getDifferenceInWeeks(outcome.getPregnancyConfirmation().getLnmp())
+                                )), List.of(), false));
+                    } catch (Exception e){
+                        log.error(e.getMessage());
+                    }
+
+                    obs.add(generateObservation("last_menstrual_period",
+                            "last_menstrual_period",
+                            new ArrayList<>(Collections.singletonList(outcome.getPregnancyConfirmation().getLnmp())), List.of(), false));
+                }
+
+                if (outcome.getPregnancyConfirmation().getPara() != null) {
+                    obs.add(generateObservation("parity", "parity",
+                            new ArrayList<>(Collections.singletonList(eventMetadata.getTaskId())), List.of(), false));
+                }
+
+                if (outcome.getPregnancyConfirmation().getGravida() != null) {
+                    obs.add(generateObservation("gravida", "gravida",
+                            new ArrayList<>(Collections.singletonList(eventMetadata.getTaskId())), List.of(), false));
+                }
+
+
+                pregnancyConfirmationStatusEvent.setObs(obs);
+                return pregnancyConfirmationStatusEvent;
+            }
+        }
+        return null;
+    }
+
     /**
      * Generate a list of Obs from the eventMetadata object
      * @param responseMetadata
      * @return obs, list of obs to add to the event
      */
-    private static List<Obs> getReferralObs(ReferralResponse.ResponseMetadata responseMetadata){
+    private static List<Obs> getReferralObs(ReferralResponse.ResponseMetadata responseMetadata) {
         List<Obs> obs = new ArrayList<>();
 
         obs.add(generateObservation("referralNo", "referralNo", new ArrayList<>(Collections.singletonList(responseMetadata.getRefferralNo())), null));
@@ -119,7 +213,7 @@ public class OpenSrpService {
             prescription_names.add(prescription.getPrescriptionName());
             prescription_dispensed.add(prescription.isDespensed());
 
-            if (prescription.isDespensed()){
+            if (prescription.isDespensed()) {
                 dispencedPrescriptionCodes.add(prescription.getPrescriptionCode());
                 dispencedPrescriptionNames.add(prescription.getPrescriptionName());
             }
@@ -132,11 +226,6 @@ public class OpenSrpService {
         //Dispensed medication observation
         Obs dispencedPrescriptionObservation = generateObservation("dispensedMedication", "dispencedMedication", dispencedPrescriptionCodes, dispencedPrescriptionNames);
         obs.add(dispencedPrescriptionObservation);
-
-        //Outcome observation
-        Obs outcomeObservation = generateObservation("outcome", "outcome", new ArrayList<>(Collections.singletonList(responseMetadata.outcomeToJsonString())), new ArrayList<>(Collections.singletonList(responseMetadata.outcomeToJsonString())));
-        obs.add(outcomeObservation);
-
         return obs;
     }
 
@@ -289,5 +378,19 @@ public class OpenSrpService {
 
             conn.setRequestProperty("Authorization", authHeader);
         }
+    }
+
+    public static long getDifferenceInWeeks(String startDateStr) {
+        // Define the date format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        // Parse the first date string into a LocalDate
+        LocalDate startDate = LocalDate.parse(startDateStr, formatter);
+
+        // Get the current date
+        LocalDate currentDate = LocalDate.now();
+
+        // Calculate the difference in weeks
+        return ChronoUnit.WEEKS.between(startDate, currentDate);
     }
 }
