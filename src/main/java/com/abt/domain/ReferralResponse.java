@@ -1,9 +1,12 @@
 package com.abt.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ReferralResponse {
@@ -98,14 +101,17 @@ public class ReferralResponse {
         @JsonProperty("referralFeedbackDate")
         private String referralFeedbackDate;
 
+        @JsonProperty("referralStatus")
+        private String referralStatus;
+
         @JsonProperty("servicesProvided")
-        private List<ServicesProvided> servicesProvided;
+        private List<ServicesProvided> servicesProvided = new ArrayList<>();
 
         @JsonProperty("prescriptions")
-        private List<Prescriptions> prescriptions;
+        private List<Prescriptions> prescriptions = new ArrayList<>();
 
         @JsonProperty("outcomes")
-        private List<Outcomes> outcomes;
+        private List<Outcomes> outcomes = new ArrayList<>();
 
         public void setRefferralNo(String referralNo) {
             this.referralNo = referralNo;
@@ -115,16 +121,27 @@ public class ReferralResponse {
             this.referralFeedbackDate = referralFeedbackDate;
         }
 
+        @JsonSetter(nulls = Nulls.AS_EMPTY)
         public void setServicesProvided(List<ServicesProvided> servicesProvided) {
             this.servicesProvided = servicesProvided;
         }
 
+        @JsonSetter(nulls = Nulls.AS_EMPTY)
         public void setPrescriptions(List<Prescriptions> prescriptions) {
             this.prescriptions = prescriptions;
         }
 
+        @JsonSetter(nulls = Nulls.AS_EMPTY)
         public void setOutcomes(List<Outcomes> outcomes) {
             this.outcomes = outcomes;
+        }
+
+        public String getReferralStatus() {
+            return referralStatus;
+        }
+
+        public void setReferralStatus(String referralStatus) {
+            this.referralStatus = referralStatus;
         }
 
         public String getRefferralNo() {
