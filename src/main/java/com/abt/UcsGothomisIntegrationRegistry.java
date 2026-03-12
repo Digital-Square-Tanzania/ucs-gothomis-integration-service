@@ -41,7 +41,20 @@ public class UcsGothomisIntegrationRegistry extends AbstractBehavior<UcsGothomis
                                                     ActorRef<UcsGothomisIntegrationRegistry.ActionPerformed> replyTo) implements UcsGothomisIntegrationRegistry.Command {
     }
 
-    public final static record ActionPerformed(String description) implements UcsGothomisIntegrationRegistry.Command {
+    public static final class ActionPerformed implements UcsGothomisIntegrationRegistry.Command {
+        private final String description;
+
+        public ActionPerformed(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String description() {
+            return description;
+        }
     }
 
 }
