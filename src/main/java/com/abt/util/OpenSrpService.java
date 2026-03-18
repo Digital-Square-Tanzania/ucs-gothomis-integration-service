@@ -355,9 +355,10 @@ public class OpenSrpService {
         }
         client.setIdentifiers(identifiers);
 
+        String mappedMaritalStatus = normalizeMaritalStatus(request.getMaritalStatus());
         Map<String, Object> attributes = new HashMap<>();
         putIfNotBlank(attributes, "mobile_number", request.getMobileNumber());
-        putIfNotBlank(attributes, "marital_status", request.getMaritalStatus());
+        putIfNotBlank(attributes, "marital_status", mappedMaritalStatus);
         putIfNotBlank(attributes, "chw_username", request.getChwUsername());
         putIfNotBlank(attributes, "reason", request.getReason());
         client.setAttributes(attributes);
@@ -397,12 +398,13 @@ public class OpenSrpService {
                 "text", "last_interacted_with", "",
                 Arrays.asList(new Object[]{String.valueOf(Calendar.getInstance().getTimeInMillis())}),
                 null, null, "last_interacted_with"));
+        String mappedMaritalStatus = normalizeMaritalStatus(request.getMaritalStatus());
         putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "surname",
                 request.getLastName(), "surname");
         putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "phone_number",
                 request.getMobileNumber(), "phone_number");
         putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "marital_status",
-                request.getMaritalStatus(), "marital_status");
+                mappedMaritalStatus, "marital_status");
         familyMemberRegistrationEvent.addObs(new Obs("concept", "text",
                 "data_source", "", Arrays.asList(new Object[]{"community_linkage"}),
                 null, null, "data_source"));
@@ -457,11 +459,12 @@ public class OpenSrpService {
 
 
         List<Obs> obs = event.getObs();
+        String mappedMaritalStatus = normalizeMaritalStatus(request.getMaritalStatus());
         putObsIfNotBlank(obs, "reason", request.getReason(), "reason");
         putObsIfNotBlank(obs, "identifier_type", request.getIdentifiers() == null ? null : request.getIdentifiers().getTypeOfIdentifier(), "identifier_type");
         putObsIfNotBlank(obs, "identifier_value", request.getIdentifiers() == null ? null : request.getIdentifiers().getValue(), "identifier_value");
         putObsIfNotBlank(obs, "mobile_number", request.getMobileNumber(), "mobile_number");
-        putObsIfNotBlank(obs, "marital_status", request.getMaritalStatus(), "marital_status");
+        putObsIfNotBlank(obs, "marital_status", mappedMaritalStatus, "marital_status");
 
         return event;
     }
@@ -581,6 +584,22 @@ public class OpenSrpService {
             return "Female";
         }
         return sex;
+    }
+
+    private static String normalizeMaritalStatus(String maritalStatus) {
+        if (StringUtils.isBlank(maritalStatus)) {
+            return null;
+        }
+
+        return switch (maritalStatus.trim().toUpperCase()) {
+            case "SINGLE" -> "Single";
+            case "MARRIED" -> "Married";
+            case "DIVORCED" -> "Divorced";
+            case "WIDOW" -> "Widowed";
+            case "CO-HABITING" -> "Cohabitation";
+            case "UNKNOWN" -> "Single";
+            default -> maritalStatus;
+        };
     }
 
     private static Date parseDate(String dateString) throws ParseException {
