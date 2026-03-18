@@ -3,10 +3,14 @@ package com.abt.util;
 
 import akka.http.javadsl.model.DateTime;
 import com.abt.UcsGothomisIntegrationRoutes;
+import com.abt.domain.Client;
+import com.abt.domain.ClientEvents;
+import com.abt.domain.CommunityLinkageRequest;
 import com.abt.domain.Event;
 import com.abt.domain.EventRequest;
 import com.abt.domain.Obs;
 import com.abt.domain.ReferralResponse;
+import com.abt.integration.model.ChwMetadata;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.StringUtils;
@@ -30,7 +34,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.time.ZoneId;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -277,6 +283,181 @@ public class OpenSrpService {
         event.setIdentifiers(new HashMap<>());
     }
 
+    private static void setMetaData(Event event, ChwMetadata chwMetadata) {
+        event.setLocationId(chwMetadata.locationId());
+        event.setProviderId(chwMetadata.providerId());
+        event.setTeamId(chwMetadata.teamId());
+        event.setTeam(chwMetadata.team());
+        event.setType("Event");
+        event.setFormSubmissionId(UUID.randomUUID().toString());
+        event.setEventDate(new Date());
+        event.setDateCreated(new Date());
+        event.addObs(OpenSrpService.getStartOb());
+        event.addObs(OpenSrpService.getEndOb());
+        event.setClientApplicationVersion(clientApplicationVersion);
+        event.setClientDatabaseVersion(clientDatabaseVersion);
+        event.setDuration(0);
+        event.setIdentifiers(new HashMap<>());
+    }
+
+    public static Client buildCommunityLinkageFamilyClient(CommunityLinkageRequest request,
+                                                           String familyBaseEntityId,
+                                                           String uniqueId,
+                                                           String clientBaseEntityId) {
+        Client familyClient = new Client(familyBaseEntityId);
+        String familyName = StringUtils.firstNonBlank(request.getLastName(), request.getFirstName(), uniqueId);
+        familyClient.setFirstName(familyName);
+        familyClient.setLastName("Family");
+        familyClient.setBirthdate(new Date(0));
+        familyClient.setBirthdateApprox(false);
+        familyClient.setDeathdateApprox(false);
+        familyClient.setGender(normalizeGender(request.getSex()));
+        familyClient.setType("Client");
+        familyClient.setId(UUID.randomUUID().toString());
+        familyClient.setDateCreated(new Date());
+        familyClient.setClientApplicationVersion(clientApplicationVersion);
+        familyClient.setClientDatabaseVersion(clientDatabaseVersion);
+        familyClient.setAttributes(new HashMap<>());
+
+        Map<String, List<String>> relationships = new HashMap<>();
+        relationships.put("family_head", Collections.singletonList(clientBaseEntityId));
+        relationships.put("primary_caregiver", Collections.singletonList(clientBaseEntityId));
+        familyClient.setRelationships(relationships);
+
+        Map<String, String> identifiers = new HashMap<>();
+        identifiers.put("opensrp_id", uniqueId + "_family");
+        familyClient.setIdentifiers(identifiers);
+
+        return familyClient;
+    }
+
+    public static Client buildCommunityLinkageClient(CommunityLinkageRequest request,
+                                                     String baseEntityId,
+                                                     String uniqueId) {
+        Client client = new Client(baseEntityId);
+        client.setFirstName(request.getFirstName());
+        client.setMiddleName(request.getMiddleName());
+        client.setLastName(request.getLastName());
+        client.setGender(normalizeGender(request.getSex()));
+        client.setBirthdate(parseBirthdate(request.getBirthDate()));
+        client.setBirthdateApprox(false);
+        client.setDeathdateApprox(false);
+        client.setType("Client");
+        client.setId(UUID.randomUUID().toString());
+        client.setDateCreated(new Date());
+        client.setClientApplicationVersion(clientApplicationVersion);
+        client.setClientDatabaseVersion(clientDatabaseVersion);
+
+        Map<String, String> identifiers = new HashMap<>();
+        identifiers.put("opensrp_id", uniqueId);
+        if (request.getIdentifiers() != null && StringUtils.isNotBlank(request.getIdentifiers().getTypeOfIdentifier())) {
+            identifiers.put(request.getIdentifiers().getTypeOfIdentifier(), request.getIdentifiers().getValue());
+        }
+        client.setIdentifiers(identifiers);
+
+        Map<String, Object> attributes = new HashMap<>();
+        putIfNotBlank(attributes, "mobile_number", request.getMobileNumber());
+        putIfNotBlank(attributes, "marital_status", request.getMaritalStatus());
+        putIfNotBlank(attributes, "chw_username", request.getChwUsername());
+        putIfNotBlank(attributes, "reason", request.getReason());
+        client.setAttributes(attributes);
+
+        return client;
+    }
+
+    public static Event buildCommunityLinkageFamilyRegistrationEvent(String familyBaseEntityId,
+                                                                     ChwMetadata chwMetadata) {
+        Event familyRegistrationEvent = new Event();
+        familyRegistrationEvent.setBaseEntityId(familyBaseEntityId);
+        familyRegistrationEvent.setEventType("Family Registration");
+        familyRegistrationEvent.setEntityType("ec_independent_client");
+        setMetaData(familyRegistrationEvent, chwMetadata);
+        familyRegistrationEvent.addObs(new Obs("formsubmissionField", "text",
+                "last_interacted_with", "",
+                Arrays.asList(new Object[]{String.valueOf(Calendar.getInstance().getTimeInMillis())}),
+                null, null, "last_interacted_with"));
+        return familyRegistrationEvent;
+    }
+
+    public static Event buildCommunityLinkageFamilyMemberRegistrationEvent(CommunityLinkageRequest request,
+                                                                           String baseEntityId,
+                                                                           ChwMetadata chwMetadata) {
+        Event familyMemberRegistrationEvent = new Event();
+        familyMemberRegistrationEvent.setBaseEntityId(baseEntityId);
+        familyMemberRegistrationEvent.setEventType("Family Member Registration");
+        familyMemberRegistrationEvent.setEntityType("ec_independent_client");
+        setMetaData(familyMemberRegistrationEvent, chwMetadata);
+        familyMemberRegistrationEvent.addObs(new Obs("formsubmissionField",
+                "text", "id_avail", "", Arrays.asList(new Object[]{"None"}),
+                null, null, "id_avail"));
+        familyMemberRegistrationEvent.addObs(new Obs("formsubmissionField",
+                "text", "leader", "", Arrays.asList(new Object[]{"None"}),
+                null, null, "leader"));
+        familyMemberRegistrationEvent.addObs(new Obs("formsubmissionField",
+                "text", "last_interacted_with", "",
+                Arrays.asList(new Object[]{String.valueOf(Calendar.getInstance().getTimeInMillis())}),
+                null, null, "last_interacted_with"));
+        putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "surname",
+                request.getLastName(), "surname");
+        putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "phone_number",
+                request.getMobileNumber(), "phone_number");
+        putObsIfNotBlank(familyMemberRegistrationEvent.getObs(), "marital_status",
+                request.getMaritalStatus(), "marital_status");
+        familyMemberRegistrationEvent.addObs(new Obs("concept", "text",
+                "data_source", "", Arrays.asList(new Object[]{"community_linkage"}),
+                null, null, "data_source"));
+        return familyMemberRegistrationEvent;
+    }
+
+    public static ClientEvents buildCommunityLinkageRegistrationPayload(CommunityLinkageRequest request,
+                                                                        String baseEntityId,
+                                                                        String uniqueId,
+                                                                        ChwMetadata chwMetadata) {
+        String familyBaseEntityId = UUID.randomUUID().toString();
+        Client familyClient = buildCommunityLinkageFamilyClient(request, familyBaseEntityId, uniqueId, baseEntityId);
+        Client client = buildCommunityLinkageClient(request, baseEntityId, uniqueId);
+
+        Map<String, List<String>> clientRelationships = new HashMap<>();
+        clientRelationships.put("family", Collections.singletonList(familyBaseEntityId));
+        client.setRelationships(clientRelationships);
+
+        List<Client> clients = new ArrayList<>();
+        clients.add(familyClient);
+        clients.add(client);
+
+        List<Event> events = new ArrayList<>();
+        events.add(buildCommunityLinkageFamilyRegistrationEvent(familyBaseEntityId, chwMetadata));
+        events.add(buildCommunityLinkageFamilyMemberRegistrationEvent(request, baseEntityId, chwMetadata));
+        events.add(buildCommunityLinkageEvent(request, baseEntityId, uniqueId, chwMetadata));
+
+        ClientEvents clientEvents = new ClientEvents();
+        clientEvents.setClients(clients);
+        clientEvents.setEvents(events);
+        clientEvents.setNoOfEvents(events.size());
+        return clientEvents;
+    }
+
+    public static Event buildCommunityLinkageEvent(CommunityLinkageRequest request,
+                                                   String baseEntityId,
+                                                   String uniqueId,
+                                                   ChwMetadata chwMetadata) {
+        Event event = new Event();
+        event.setBaseEntityId(baseEntityId);
+        event.setEventType("Community Linkage");
+        event.setEntityType("community_linkage");
+        setMetaData(event, chwMetadata);
+
+
+        List<Obs> obs = event.getObs();
+        putObsIfNotBlank(obs, "reason", request.getReason(), "reason");
+        putObsIfNotBlank(obs, "identifier_type", request.getIdentifiers() == null ? null : request.getIdentifiers().getTypeOfIdentifier(), "identifier_type");
+        putObsIfNotBlank(obs, "identifier_value", request.getIdentifiers() == null ? null : request.getIdentifiers().getValue(), "identifier_value");
+        putObsIfNotBlank(obs, "mobile_number", request.getMobileNumber(), "mobile_number");
+        putObsIfNotBlank(obs, "marital_status", request.getMaritalStatus(), "marital_status");
+
+        return event;
+    }
+
     private static boolean isInteger(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -303,7 +484,15 @@ public class OpenSrpService {
 
 
     public static String sendDataToDestination(EventRequest events, String mUrl, String username, String password) {
-        String response = "";
+        return sendPayloadToDestination(events, mUrl, username, password);
+    }
+
+    public static String sendDataToDestination(ClientEvents clientEvents, String mUrl, String username, String password) {
+        return sendPayloadToDestination(clientEvents, mUrl, username, password);
+    }
+
+    private static String sendPayloadToDestination(Object payload, String mUrl, String username, String password) {
+        String response;
         try {
             URL url = new URL(mUrl);
 
@@ -315,15 +504,7 @@ public class OpenSrpService {
             configureBasicAuthHeader(username, password, conn);
 
             try (OutputStream os = conn.getOutputStream()) {
-
-                Gson gson
-                        = new GsonBuilder()
-                        .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-                        .registerTypeAdapter(DateTime.class, new DateTimeTypeConverter())
-                        .create();
-
-                byte[] input =
-                        gson.toJson(events).getBytes(StandardCharsets.UTF_8);
+                byte[] input = buildPayloadGson().toJson(payload).getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);
             }
 
@@ -348,6 +529,50 @@ public class OpenSrpService {
 
         }
         return response;
+    }
+
+    private static Gson buildPayloadGson() {
+        return new GsonBuilder()
+                .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+                .registerTypeAdapter(DateTime.class, new DateTimeTypeConverter())
+                .create();
+    }
+
+    private static void putIfNotBlank(Map<String, Object> target, String key, String value) {
+        if (StringUtils.isNotBlank(value)) {
+            target.put(key, value);
+        }
+    }
+
+    private static void putObsIfNotBlank(List<Obs> obs,
+                                         String fieldCode,
+                                         String value,
+                                         String formSubmissionField) {
+        if (StringUtils.isNotBlank(value)) {
+            obs.add(new Obs("concept", "text", fieldCode, "",
+                    new ArrayList<>(Collections.singletonList(value)),
+                    List.of(), null, formSubmissionField));
+        }
+    }
+
+    private static Date parseBirthdate(String birthDate) {
+        if (StringUtils.isBlank(birthDate)) {
+            return null;
+        }
+        return Date.from(java.time.LocalDate.parse(birthDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    private static String normalizeGender(String sex) {
+        if (StringUtils.isBlank(sex)) {
+            return null;
+        }
+        if ("MALE".equalsIgnoreCase(sex) || "M".equalsIgnoreCase(sex)) {
+            return "Male";
+        }
+        if ("FEMALE".equalsIgnoreCase(sex) || "F".equalsIgnoreCase(sex)) {
+            return "Female";
+        }
+        return sex;
     }
 
     private static Date parseDate(String dateString) throws ParseException {

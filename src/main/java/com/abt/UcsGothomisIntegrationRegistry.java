@@ -7,6 +7,8 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import com.abt.actors.SendResponseProcessor;
+import com.abt.actors.SendCommunityLinkageProcessor;
+import com.abt.domain.CommunityLinkageRequest;
 import com.abt.domain.ReferralResponse;
 
 
@@ -24,6 +26,7 @@ public class UcsGothomisIntegrationRegistry extends AbstractBehavior<UcsGothomis
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
                 .onMessage(SendReferralResponse.class, this::onSendRefferralResponse)
+                .onMessage(SendCommunityLinkage.class, this::onSendCommunityLinkage)
                 .build();
     }
 
@@ -33,10 +36,21 @@ public class UcsGothomisIntegrationRegistry extends AbstractBehavior<UcsGothomis
         return this;
     }
 
+    private Behavior<UcsGothomisIntegrationRegistry.Command> onSendCommunityLinkage(SendCommunityLinkage command) {
+        String response = new SendCommunityLinkageProcessor().sendCommunityLinkage(command.communityLinkageRequest, command.url, command.username, command.password);
+        command.replyTo().tell(new UcsGothomisIntegrationRegistry.ActionPerformed(String.format(response)));
+        return this;
+    }
+
     sealed interface Command {
     }
 
     public final static record SendReferralResponse(ReferralResponse referralResponse,
+                                                    String url, String username, String password,
+                                                    ActorRef<UcsGothomisIntegrationRegistry.ActionPerformed> replyTo) implements UcsGothomisIntegrationRegistry.Command {
+    }
+
+    public final static record SendCommunityLinkage(CommunityLinkageRequest communityLinkageRequest,
                                                     String url, String username, String password,
                                                     ActorRef<UcsGothomisIntegrationRegistry.ActionPerformed> replyTo) implements UcsGothomisIntegrationRegistry.Command {
     }
