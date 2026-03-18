@@ -3,9 +3,11 @@ package com.abt.util;
 import com.abt.domain.ClientEvents;
 import com.abt.domain.CommunityLinkageRequest;
 import com.abt.domain.Event;
+import com.abt.domain.Obs;
 import com.abt.integration.model.ChwMetadata;
 import org.junit.jupiter.api.Test;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,7 @@ class OpenSrpServiceCommunityLinkageTest {
         assertTrue(eventObs.contains("163138AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
         assertNotNull(event.getEventDate());
         assertNotNull(event.getDateCreated());
+        assertEquals("Married", maritalStatusValue(event));
     }
 
     @Test
@@ -52,12 +55,36 @@ class OpenSrpServiceCommunityLinkageTest {
         assertEquals(3, clientEvents.getNoOfEvents());
         assertEquals("1223141_family", clientEvents.getClients().get(0).getIdentifiers().get("opensrp_id"));
         assertEquals("1223141", clientEvents.getClients().get(1).getIdentifiers().get("opensrp_id"));
+        assertEquals("Married", clientEvents.getClients().get(1).getAttributes().get("marital_status"));
         assertEquals("base-123", clientEvents.getClients().get(0).getRelationships().get("family_head").get(0));
         assertEquals(clientEvents.getClients().get(0).getBaseEntityId(),
                 clientEvents.getClients().get(1).getRelationships().get("family").get(0));
         assertEquals(
                 Set.of("Family Registration", "Family Member Registration", "Community Linkage"),
                 clientEvents.getEvents().stream().map(Event::getEventType).collect(Collectors.toSet())
+        );
+    }
+
+    @Test
+    void skipsMaritalStatusWhenUnknown() {
+        CommunityLinkageRequest request = buildRequest();
+        request.setMaritalStatus("UNKNOWN");
+        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1");
+
+        ClientEvents clientEvents = OpenSrpService.buildCommunityLinkageRegistrationPayload(
+                request, "base-123", "1223141", chwMetadata
+        );
+        Event event = OpenSrpService.buildCommunityLinkageEvent(request, "base-123", "1223141", chwMetadata);
+
+        assertEquals(null, clientEvents.getClients().get(1).getAttributes().get("marital_status"));
+        assertEquals(null, maritalStatusValue(event));
+        assertEquals(
+                null,
+                clientEvents.getEvents().stream()
+                        .filter(candidate -> "Family Member Registration".equals(candidate.getEventType()))
+                        .findFirst()
+                        .map(OpenSrpServiceCommunityLinkageTest::maritalStatusValue)
+                        .orElse(null)
         );
     }
 
@@ -73,9 +100,18 @@ class OpenSrpServiceCommunityLinkageTest {
         request.setBirthDate("1960-03-06");
         request.setSex("MALE");
         request.setMobileNumber("0763810222");
-        request.setMaritalStatus("married");
+        request.setMaritalStatus("MARRIED");
         request.setChwUsername("tintu");
         request.setReason("string");
         return request;
+    }
+
+    private static String maritalStatusValue(Event event) {
+        return event.getObs().stream()
+                .filter(obs -> "marital_status".equals(obs.getFieldCode()))
+                .findFirst()
+                .map(Obs::getValue)
+                .map(Objects::toString)
+                .orElse(null);
     }
 }
