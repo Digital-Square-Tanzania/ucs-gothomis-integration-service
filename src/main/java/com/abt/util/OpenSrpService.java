@@ -446,6 +446,14 @@ public class OpenSrpService {
         event.setEventType("Community Linkage");
         event.setEntityType("community_linkage");
         setMetaData(event, chwMetadata);
+        event.addIdentifier("opensrp_id", uniqueId);
+        if (request.getIdentifiers() != null && StringUtils.isNotBlank(request.getIdentifiers().getTypeOfIdentifier())
+                && StringUtils.isNotBlank(request.getIdentifiers().getValue())) {
+            event.addIdentifier(request.getIdentifiers().getTypeOfIdentifier(), request.getIdentifiers().getValue());
+        }
+        if (StringUtils.isNotBlank(request.getReason())) {
+            event.addDetails("reason", request.getReason());
+        }
 
 
         List<Obs> obs = event.getObs();
