@@ -33,9 +33,22 @@ public class CommunityLinkageRepository {
     }
 
     public Optional<ChwMetadata> findChwMetadata(Connection connection, String chwUsername) throws SQLException {
-        String sql = "SELECT tm.identifier, tm.team_name, tm.uuid, tm.location_uuid,tl.village " +
+        if (tableExists(connection, "tanzania_locations_v2")) {
+            Optional<ChwMetadata> chwMetadata = findChwMetadata(connection, chwUsername, "tanzania_locations_v2");
+            if (chwMetadata.isPresent() && chwMetadata.get().village() != null) {
+                return chwMetadata;
+            }
+        }
+
+        return findChwMetadata(connection, chwUsername, "tanzania_locations");
+    }
+
+    private Optional<ChwMetadata> findChwMetadata(Connection connection,
+                                                  String chwUsername,
+                                                  String locationTable) throws SQLException {
+        String sql = "SELECT tm.identifier, tm.team_name, tm.uuid, tm.location_uuid, tl.village " +
                 "FROM " + schema + ".team_members tm " +
-                "LEFT JOIN " + schema + ".tanzania_locations tl ON tl.location_uuid = tm.location_uuid " +
+                "LEFT JOIN " + schema + "." + locationTable + " tl ON tl.location_uuid = tm.location_uuid " +
                 "WHERE tm.identifier = ? LIMIT 1";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -51,6 +64,18 @@ public class CommunityLinkageRepository {
                         resultSet.getString("location_uuid"),
                         resultSet.getString("village")
                 ));
+            }
+        }
+    }
+
+    private boolean tableExists(Connection connection, String tableName) throws SQLException {
+        String sql = "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ? LIMIT 1";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, schema);
+            statement.setString(2, tableName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
             }
         }
     }

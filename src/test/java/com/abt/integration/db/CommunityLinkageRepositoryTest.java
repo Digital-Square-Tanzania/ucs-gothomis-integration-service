@@ -26,6 +26,7 @@ class CommunityLinkageRepositoryTest {
 
         try (Statement statement = connection.createStatement()) {
             statement.execute("CREATE SCHEMA IF NOT EXISTS public");
+            statement.execute("DROP TABLE IF EXISTS public.tanzania_locations_v2");
             statement.execute("CREATE TABLE IF NOT EXISTS public.client (base_entity_id VARCHAR(255) NOT NULL, client_id VARCHAR(255) NOT NULL, unique_id VARCHAR(255) NOT NULL, first_name VARCHAR(255), middle_name VARCHAR(255), last_name VARCHAR(255), sex VARCHAR(255), birth_date VARCHAR(255), marital_status VARCHAR(255), phone_number VARCHAR(255), entity_type VARCHAR(255), team VARCHAR(255), team_id VARCHAR(255), location_id VARCHAR(255), provider_id VARCHAR(255), event_date TIMESTAMP, family VARCHAR(255), leadership VARCHAR(255))");
             statement.execute("CREATE TABLE IF NOT EXISTS public.team_members (uuid VARCHAR(255) NOT NULL, identifier VARCHAR(255), name VARCHAR(255), location_uuid VARCHAR(255) NOT NULL, location_name VARCHAR(255), team_name VARCHAR(255))");
             statement.execute("CREATE TABLE IF NOT EXISTS public.tanzania_locations (location_uuid VARCHAR(255) NOT NULL, village VARCHAR(255), health_facility VARCHAR(255), hfr_code VARCHAR(255), ward VARCHAR(255), district_council VARCHAR(255), district VARCHAR(255), region VARCHAR(255), zone VARCHAR(255), country VARCHAR(255), is_pepfar_site BOOLEAN, village_code VARCHAR(50), ward_code VARCHAR(255), district_code VARCHAR(50), council_code VARCHAR(50), region_code VARCHAR(50))");
@@ -63,6 +64,31 @@ class CommunityLinkageRepositoryTest {
         assertEquals("Team A", result.get().team());
         assertEquals("team-uuid-1", result.get().teamId());
         assertEquals("location-uuid-1", result.get().locationId());
+        assertEquals("Village", result.get().village());
+    }
+
+    @Test
+    void prefersTanzaniaLocationsV2WhenItExistsAndHasVillage() throws Exception {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE public.tanzania_locations_v2 (location_uuid VARCHAR(255) NOT NULL, village VARCHAR(255))");
+            statement.execute("INSERT INTO public.tanzania_locations_v2 (location_uuid, village) VALUES ('location-uuid-1', 'Village V2')");
+        }
+
+        Optional<ChwMetadata> result = repository.findChwMetadata(connection, "tintu");
+
+        assertTrue(result.isPresent());
+        assertEquals("Village V2", result.get().village());
+    }
+
+    @Test
+    void fallsBackToTanzaniaLocationsWhenTanzaniaLocationsV2HasNoMatchingVillage() throws Exception {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE public.tanzania_locations_v2 (location_uuid VARCHAR(255) NOT NULL, village VARCHAR(255))");
+        }
+
+        Optional<ChwMetadata> result = repository.findChwMetadata(connection, "tintu");
+
+        assertTrue(result.isPresent());
         assertEquals("Village", result.get().village());
     }
 }
