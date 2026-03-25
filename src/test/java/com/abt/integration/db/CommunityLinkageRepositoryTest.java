@@ -63,5 +63,6 @@ class CommunityLinkageRepositoryTest {
         assertEquals("Team A", result.get().team());
         assertEquals("team-uuid-1", result.get().teamId());
         assertEquals("location-uuid-1", result.get().locationId());
+        assertEquals("Village", result.get().village());
     }
 }

@@ -3,6 +3,7 @@ package com.abt.util;
 
 import akka.http.javadsl.model.DateTime;
 import com.abt.UcsGothomisIntegrationRoutes;
+import com.abt.domain.Address;
 import com.abt.domain.Client;
 import com.abt.domain.ClientEvents;
 import com.abt.domain.CommunityLinkageRequest;
@@ -303,7 +304,8 @@ public class OpenSrpService {
     public static Client buildCommunityLinkageFamilyClient(CommunityLinkageRequest request,
                                                            String familyBaseEntityId,
                                                            String uniqueId,
-                                                           String clientBaseEntityId) {
+                                                           String clientBaseEntityId,
+                                                           ChwMetadata chwMetadata) {
         Client familyClient = new Client(familyBaseEntityId);
         String familyName = StringUtils.firstNonBlank(request.getLastName(), request.getFirstName(), uniqueId);
         familyClient.setFirstName(familyName);
@@ -327,6 +329,10 @@ public class OpenSrpService {
         Map<String, String> identifiers = new HashMap<>();
         identifiers.put("opensrp_id", uniqueId + "_family");
         familyClient.setIdentifiers(identifiers);
+
+        Address address = new Address();
+        address.setCityVillage(chwMetadata.village());
+        familyClient.addAddress(address);
 
         return familyClient;
     }
@@ -416,7 +422,9 @@ public class OpenSrpService {
                                                                         String uniqueId,
                                                                         ChwMetadata chwMetadata) {
         String familyBaseEntityId = UUID.randomUUID().toString();
-        Client familyClient = buildCommunityLinkageFamilyClient(request, familyBaseEntityId, uniqueId, baseEntityId);
+        Client familyClient = buildCommunityLinkageFamilyClient(
+                request, familyBaseEntityId, uniqueId, baseEntityId, chwMetadata
+        );
         Client client = buildCommunityLinkageClient(request, baseEntityId, uniqueId);
 
         Map<String, List<String>> clientRelationships = new HashMap<>();
@@ -597,7 +605,7 @@ public class OpenSrpService {
             case "DIVORCED" -> "Divorced";
             case "WIDOW" -> "Widowed";
             case "CO-HABITING" -> "Cohabitation";
-            case "UNKNOWN" -> "Single";
+            case "UNKNOWN" -> null;
             default -> maritalStatus;
         };
     }

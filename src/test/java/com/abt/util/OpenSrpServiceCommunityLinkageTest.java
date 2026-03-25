@@ -20,7 +20,7 @@ class OpenSrpServiceCommunityLinkageTest {
     @Test
     void buildsCommunityLinkageClientAndEvent() {
         CommunityLinkageRequest request = buildRequest();
-        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1");
+        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1", "Village");
         Event event = OpenSrpService.buildCommunityLinkageEvent(request, "base-123", "1223141", chwMetadata);
 
         assertEquals("Community Linkage", event.getEventType());
@@ -44,7 +44,7 @@ class OpenSrpServiceCommunityLinkageTest {
     @Test
     void buildsRegistrationPayloadForNewClient() {
         CommunityLinkageRequest request = buildRequest();
-        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1");
+        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1", "Village");
 
         ClientEvents clientEvents = OpenSrpService.buildCommunityLinkageRegistrationPayload(
                 request, "base-123", "1223141", chwMetadata
@@ -57,6 +57,8 @@ class OpenSrpServiceCommunityLinkageTest {
         assertEquals("1223141", clientEvents.getClients().get(1).getIdentifiers().get("opensrp_id"));
         assertEquals("Married", clientEvents.getClients().get(1).getAttributes().get("marital_status"));
         assertEquals("base-123", clientEvents.getClients().get(0).getRelationships().get("family_head").get(0));
+        assertEquals(1, clientEvents.getClients().get(0).getAddresses().size());
+        assertEquals("Village", clientEvents.getClients().get(0).getAddresses().get(0).getCityVillage());
         assertEquals(clientEvents.getClients().get(0).getBaseEntityId(),
                 clientEvents.getClients().get(1).getRelationships().get("family").get(0));
         assertEquals(
@@ -69,7 +71,7 @@ class OpenSrpServiceCommunityLinkageTest {
     void skipsMaritalStatusWhenUnknown() {
         CommunityLinkageRequest request = buildRequest();
         request.setMaritalStatus("UNKNOWN");
-        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1");
+        ChwMetadata chwMetadata = new ChwMetadata("tintu", "Team A", "team-uuid-1", "location-uuid-1", "Village");
 
         ClientEvents clientEvents = OpenSrpService.buildCommunityLinkageRegistrationPayload(
                 request, "base-123", "1223141", chwMetadata

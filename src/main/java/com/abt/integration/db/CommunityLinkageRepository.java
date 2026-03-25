@@ -33,7 +33,7 @@ public class CommunityLinkageRepository {
     }
 
     public Optional<ChwMetadata> findChwMetadata(Connection connection, String chwUsername) throws SQLException {
-        String sql = "SELECT tm.identifier, tm.team_name, tm.uuid, tm.location_uuid " +
+        String sql = "SELECT tm.identifier, tm.team_name, tm.uuid, tm.location_uuid,tl.village " +
                 "FROM " + schema + ".team_members tm " +
                 "LEFT JOIN " + schema + ".tanzania_locations tl ON tl.location_uuid = tm.location_uuid " +
                 "WHERE tm.identifier = ? LIMIT 1";
@@ -48,7 +48,8 @@ public class CommunityLinkageRepository {
                         resultSet.getString("identifier"),
                         resultSet.getString("team_name"),
                         resultSet.getString("uuid"),
-                        resultSet.getString("location_uuid")
+                        resultSet.getString("location_uuid"),
+                        resultSet.getString("village")
                 ));
             }
         }
