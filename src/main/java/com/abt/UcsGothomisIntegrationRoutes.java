@@ -7,6 +7,7 @@ import akka.actor.typed.javadsl.AskPattern;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.server.Route;
+import com.abt.domain.CommunityLinkageRequest;
 import com.abt.domain.ReferralResponse;
 import com.abt.util.CustomJacksonSupport;
 import org.slf4j.Logger;
@@ -42,6 +43,10 @@ public class UcsGothomisIntegrationRoutes {
         return AskPattern.ask(gothomisIntegrationActor, ref -> new UcsGothomisIntegrationRegistry.SendReferralResponse(response, url, username, password, ref), askTimeout, scheduler);
     }
 
+    private CompletionStage<UcsGothomisIntegrationRegistry.ActionPerformed> sendCommunityLinkage(CommunityLinkageRequest request) {
+        return AskPattern.ask(gothomisIntegrationActor, ref -> new UcsGothomisIntegrationRegistry.SendCommunityLinkage(request, url, username, password, ref), askTimeout, scheduler);
+    }
+
     //Add rejection route
 
     /**
@@ -67,6 +72,27 @@ public class UcsGothomisIntegrationRoutes {
                                                                 })
                                                 )
                                         )
+                                )
+                        )
+                )
+        );
+    }
+
+    public Route communityLinkageRoutes() {
+        return pathPrefix("send", () ->
+                path("community-linkage", () ->
+                        post(() ->
+                                entity(
+                                        CustomJacksonSupport.customJacksonUnmarshaller(CommunityLinkageRequest.class),
+                                        result ->
+                                                onSuccess(sendCommunityLinkage(result), performed -> {
+                                                    log.info("Sent Community Linkage: {}", performed.description());
+                                                    if (performed.description().toLowerCase().contains("error")) {
+                                                        return complete(StatusCodes.BAD_REQUEST, performed, Jackson.marshaller());
+                                                    } else {
+                                                        return complete(StatusCodes.OK, performed, Jackson.marshaller());
+                                                    }
+                                                })
                                 )
                         )
                 )

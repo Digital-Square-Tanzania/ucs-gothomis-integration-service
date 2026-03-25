@@ -12,6 +12,8 @@ import akka.http.javadsl.server.Route;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletionStage;
 
+import static akka.http.javadsl.server.Directives.concat;
+
 //#main-class
 public class UcsGothomisIntegrationServiceApp {
 
@@ -40,7 +42,13 @@ public class UcsGothomisIntegrationServiceApp {
                     context.spawn(UcsGothomisIntegrationRegistry.create(), "UcsGothomisIntegration");
 
             UcsGothomisIntegrationRoutes ucsGothomisIntegrationRoutes = new UcsGothomisIntegrationRoutes(context.getSystem(), userRegistryActor);
-            startHttpServer(ucsGothomisIntegrationRoutes.referralResponseRoutes(), context.getSystem());
+            startHttpServer(
+                    concat(
+                            ucsGothomisIntegrationRoutes.referralResponseRoutes(),
+                            ucsGothomisIntegrationRoutes.communityLinkageRoutes()
+                    ),
+                    context.getSystem()
+            );
 
             return Behaviors.empty();
         });
