@@ -26,6 +26,7 @@ public class SendCommunityLinkageProcessor {
         CommunityLinkageRepository repository = new CommunityLinkageRepository(connectionFactory.schema());
 
         try (Connection connection = connectionFactory.openConnection()) {
+            log.info(SendCommunityLinkageProcessor.class.getSimpleName(),"DB Connection Established");
             String identifierValue = request.getIdentifiers() == null ? null : request.getIdentifiers().getValue();
             if (identifierValue == null || identifierValue.isBlank()) {
                 return "Internal Error while processing the payload: identifiers.value is required";

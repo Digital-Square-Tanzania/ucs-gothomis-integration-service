@@ -3,6 +3,7 @@ package com.abt.util;
 
 import akka.http.javadsl.model.DateTime;
 import com.abt.UcsGothomisIntegrationRoutes;
+import com.abt.actors.SendCommunityLinkageProcessor;
 import com.abt.domain.Address;
 import com.abt.domain.Client;
 import com.abt.domain.ClientEvents;
@@ -507,6 +508,7 @@ public class OpenSrpService {
     }
 
     public static String sendDataToDestination(ClientEvents clientEvents, String mUrl, String username, String password) {
+        log.info(OpenSrpService.class.getSimpleName(),"Sending to Opensrp: "+new Gson().toJson(clientEvents));
         return sendPayloadToDestination(clientEvents, mUrl, username, password);
     }
 
