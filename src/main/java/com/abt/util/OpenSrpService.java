@@ -185,6 +185,51 @@ public class OpenSrpService {
     }
 
     /**
+     * Creates the Diabetes and Hypertension Screening Confirmation event from
+     * NCD final diagnosis outcomes.
+     *
+     * @param referralResponse the referral response object
+     * @return Diabetes and Hypertension Screening Confirmation Event
+     */
+    public static Event getDiabetesHypertensionScreeningConfirmationEvent(ReferralResponse referralResponse) {
+        ReferralResponse.GothomisResponse response = referralResponse.getGothomisResponse();
+        ReferralResponse.ResponseMetadata responseMetadata = response.getResponseMetadata();
+
+        boolean hasNcdFinalDiagnosis = false;
+        boolean diabeticClient = false;
+        boolean hypertensiveClient = false;
+
+        for (ReferralResponse.Outcomes outcome : responseMetadata.getOutcomes()) {
+            ReferralResponse.NcdFinalDiagnosis ncdFinalDiagnosis = outcome.getNcdFinalDiagnosis();
+            if (ncdFinalDiagnosis == null) {
+                continue;
+            }
+
+            hasNcdFinalDiagnosis = true;
+            diabeticClient = diabeticClient || ncdFinalDiagnosis.isDiabeticClient();
+            hypertensiveClient = hypertensiveClient || ncdFinalDiagnosis.isHypertensiveClient();
+        }
+
+        if (!hasNcdFinalDiagnosis) {
+            return null;
+        }
+
+        ReferralResponse.EventMetadata eventMetadata = referralResponse.getEventMetadata();
+        Event screeningConfirmationEvent = new Event();
+        setMetaData(screeningConfirmationEvent, eventMetadata);
+        screeningConfirmationEvent.setBaseEntityId(eventMetadata.getBaseEntityId());
+        screeningConfirmationEvent.setEventType("Diabetes and Hypertension Screening Confirmation");
+        screeningConfirmationEvent.setEntityType("ec_diabetes_hypertension_confirmation");
+        screeningConfirmationEvent.addDetails("detailsUpdated", "true");
+        screeningConfirmationEvent.setObs(Arrays.asList(
+                generateFormSubmissionObservation("diabetes_result", getScreeningResult(diabeticClient)),
+                generateFormSubmissionObservation("hypertension_result", getScreeningResult(hypertensiveClient))
+        ));
+
+        return screeningConfirmationEvent;
+    }
+
+    /**
      * Generate a list of Obs from the eventMetadata object
      * @param responseMetadata
      * @return obs, list of obs to add to the event
@@ -260,6 +305,23 @@ public class OpenSrpService {
                 null,
                 formSubmissionField,
                 saveAsArray);
+    }
+
+    private static Obs generateFormSubmissionObservation(String fieldCode, String value) {
+        return new Obs(
+                "formsubmissionField",
+                "text",
+                fieldCode,
+                "",
+                new ArrayList<>(Collections.singletonList(value)),
+                new ArrayList<>(Collections.singletonList(value)),
+                null,
+                fieldCode,
+                false);
+    }
+
+    private static String getScreeningResult(boolean positive) {
+        return positive ? "Positive" : "Negative";
     }
 
     /**

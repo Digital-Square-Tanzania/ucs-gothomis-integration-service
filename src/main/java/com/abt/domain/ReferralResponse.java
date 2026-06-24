@@ -334,12 +334,49 @@ public class ReferralResponse {
         @JsonProperty("pregnancyConfirmation")
         private PregnancyConfirmation pregnancyConfirmation;
 
+        @JsonProperty("ncdFinalDiagnosis")
+        private NcdFinalDiagnosis ncdFinalDiagnosis;
+
         public PregnancyConfirmation getPregnancyConfirmation() {
             return pregnancyConfirmation;
         }
 
         public void setPregnancyConfirmation(PregnancyConfirmation pregnancyConfirmation) {
             this.pregnancyConfirmation = pregnancyConfirmation;
+        }
+
+        public NcdFinalDiagnosis getNcdFinalDiagnosis() {
+            return ncdFinalDiagnosis;
+        }
+
+        public void setNcdFinalDiagnosis(NcdFinalDiagnosis ncdFinalDiagnosis) {
+            this.ncdFinalDiagnosis = ncdFinalDiagnosis;
+        }
+
+    }
+
+    public static class NcdFinalDiagnosis {
+
+        @JsonProperty("diabeticClient")
+        private boolean diabeticClient;
+
+        @JsonProperty("hypertensiveClient")
+        private boolean hypertensiveClient;
+
+        public boolean isDiabeticClient() {
+            return diabeticClient;
+        }
+
+        public void setDiabeticClient(boolean diabeticClient) {
+            this.diabeticClient = diabeticClient;
+        }
+
+        public boolean isHypertensiveClient() {
+            return hypertensiveClient;
+        }
+
+        public void setHypertensiveClient(boolean hypertensiveClient) {
+            this.hypertensiveClient = hypertensiveClient;
         }
 
     }

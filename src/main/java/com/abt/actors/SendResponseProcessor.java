@@ -19,11 +19,16 @@ public class SendResponseProcessor {
             List<Event> events = new ArrayList<>();
             Event referralResponseEvent =
                     OpenSrpService.getReferralResponseEvent(referralResponse);
+            Event diabetesHypertensionScreeningConfirmationEvent =
+                    OpenSrpService.getDiabetesHypertensionScreeningConfirmationEvent(referralResponse);
             Event pregnancyConfirmationEvent =
                     OpenSrpService.getPregnancyConfirmationEvent(referralResponse);
 
 
             events.add(referralResponseEvent);
+            if (diabetesHypertensionScreeningConfirmationEvent != null) {
+                events.add(diabetesHypertensionScreeningConfirmationEvent);
+            }
             if (pregnancyConfirmationEvent != null) {
                 events.add(pregnancyConfirmationEvent);
             }
